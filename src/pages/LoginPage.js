@@ -20,7 +20,7 @@ const LoginPage = () => {
         if (user.type === 'student') {
             navigate('/subjects');
         } else if (user.type === 'admin') {
-            navigate('/admin-login');
+            navigate('/admin/login');
 }
 
     }, [navigate]);

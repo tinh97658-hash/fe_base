@@ -20,8 +20,9 @@ const LoginPage = () => {
         if (user.type === 'student') {
             navigate('/subjects');
         } else if (user.type === 'admin') {
-            navigate('/admin/dashboard');
-        }
+            navigate('/admin-login');
+}
+
     }, [navigate]);
 
     const handleInputChange = (e) => {
@@ -99,8 +100,8 @@ const LoginPage = () => {
                 setSuccess('Đăng nhập thành công! Đang chuyển hướng...');
                 
                 setTimeout(() => {
-                    navigate('/admin/dashboard');
-                }, 1000);
+                    navigate('/admin/login');
+                    }, 1000);
                 
             } else {
                 setError('Tài khoản hoặc mật khẩu không đúng!');

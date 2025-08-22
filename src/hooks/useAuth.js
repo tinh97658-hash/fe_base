@@ -1,44 +1,83 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
+import { loginUser, logoutUser, getCurrentUser } from '../services/api';
 
-export const useAuth = () => {
+const AuthContext = createContext(null);
+
+export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    try {
-      const userData = localStorage.getItem('user');
-      if (userData) {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
-        setIsAuthenticated(true);
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const userData = await getCurrentUser();
+          setUser(userData);
+        } catch (error) {
+          // Token không hợp lệ hoặc hết hạn
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        }
       }
-    } catch (error) {
-      console.error('Error parsing user data:', error);
-      localStorage.removeItem('user');
-    } finally {
       setLoading(false);
-    }
+    };
+
+    checkAuth();
   }, []);
 
-  const login = (userData) => {
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-    setIsAuthenticated(true);
+  const login = async (username, password) => {
+    try {
+      setError(null);
+      const data = await loginUser(username, password);
+      localStorage.setItem('token', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      setUser(data.user);
+      return data;
+    } catch (err) {
+      setError(err.message);
+      throw err;
+    }
   };
 
-  const logout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('rememberLogin');
-    setUser(null);
-    setIsAuthenticated(false);
+  const logout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      setUser(null);
+    }
   };
 
-  return {
-    user,
-    isAuthenticated,
-    loading,
-    login,
-    logout
-  };
+  const isAuthenticated = !!user;
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated,
+        loading,
+        error,
+        login,
+        logout
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+// loginUser now attempts backend then JSON Server; no changes needed here

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './LoginPage.module.css';
+import { useAuth } from '../hooks/useAuth';
 
 const LoginPage = () => {
     const [formData, setFormData] = useState({
@@ -13,17 +14,8 @@ const LoginPage = () => {
     const [success, setSuccess] = useState('');
     
     const navigate = useNavigate();
+    const { login } = useAuth(); // NEW
 
-    // Check if user is already logged in
-    useEffect(() => {
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        if (user.type === 'student') {
-            navigate('/subjects');
-        } else if (user.type === 'admin') {
-            navigate('/admin/login');
-}
-
-    }, [navigate]);
 
     const handleInputChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -37,77 +29,68 @@ const LoginPage = () => {
         setSuccess('');
     };
 
+    // Thêm thông tin khoa vào người dùng mẫu
     const fillDemo = (type) => {
-        setFormData(prev => ({
-            ...prev,
-            username: type,
-            password: '123'
-        }));
+        if (type === 'student') {
+            setFormData({
+                username: 'student',
+                password: '123',
+                rememberMe: true,
+                department: 'Công nghệ thông tin' // Thêm thông tin khoa
+            });
+        } else if (type === 'admin') {
+            setFormData({
+                username: 'admin',
+                password: '123',
+                rememberMe: true
+            });
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
         if (!formData.username || !formData.password) {
             setError('Vui lòng nhập đầy đủ thông tin!');
             return;
         }
-
+        
         setLoading(true);
         setError('');
-
-        // Simulate network delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
+        setSuccess('');
+        
         try {
-            if (formData.username === 'student' && formData.password === '123') {
-                const userData = {
-                    type: 'student',
-                    username: 'student',
-                    name: 'Nguyễn Văn A',
-                    studentId: 'SV2024001',
-                    class: 'Hàng Hải K20A',
-                    email: 'student@maritime.edu.vn',
-                    loginTime: new Date().toISOString()
-                };
-                
-                localStorage.setItem('user', JSON.stringify(userData));
-                if (formData.rememberMe) {
-                    localStorage.setItem('rememberLogin', 'true');
+            // Allow longer timeout for API calls
+            const loginTimeout = setTimeout(() => {
+                if (loading) {
+                    setError('Kết nối tới máy chủ quá lâu. Đang thử phương thức đăng nhập khác...');
                 }
-                
-                setSuccess('Đăng nhập thành công! Đang chuyển hướng...');
+            }, 3000);
+            
+            const data = await login(formData.username, formData.password);
+            clearTimeout(loginTimeout);
+            
+            if (formData.rememberMe) localStorage.setItem('rememberLogin', 'true');
+            
+            setSuccess('Đăng nhập thành công! Đang chuyển hướng...');
+            
+            // Save the user type to localStorage in case useAuth hasn't updated yet
+            if (data?.user?.type) {
+                const userType = data.user.type;
                 
                 setTimeout(() => {
-                    navigate('/student/subjects');
-                }, 1000);
-                
-            } else if (formData.username === 'admin' && formData.password === '123') {
-                const userData = {
-                    type: 'admin',
-                    username: 'admin',
-                    name: 'Quản trị viên',
-                    role: 'Administrator',
-                    email: 'admin@maritime.edu.vn',
-                    loginTime: new Date().toISOString()
-                };
-                
-                localStorage.setItem('user', JSON.stringify(userData));
-                if (formData.rememberMe) {
-                    localStorage.setItem('rememberLogin', 'true');
-                }
-                
-                setSuccess('Đăng nhập thành công! Đang chuyển hướng...');
-                
-                setTimeout(() => {
-                    navigate('/admin/login');
-                    }, 1000);
-                
+                    if (userType === 'admin') {
+                        navigate('/admin/login');
+                    } else {
+                        navigate('/student/subjects');
+                    }
+                }, 600);
             } else {
-                setError('Tài khoản hoặc mật khẩu không đúng!');
+                // Fallback navigation if user type not available
+                navigate('/student/subjects');
             }
         } catch (err) {
-            setError('Đã xảy ra lỗi. Vui lòng thử lại!');
+            console.error('Login error:', err);
+            setError(err.message || 'Tài khoản hoặc mật khẩu không đúng!');
         } finally {
             setLoading(false);
         }
@@ -188,7 +171,13 @@ const LoginPage = () => {
                             <span className={styles.checkmark}></span>
                             <span>Ghi nhớ đăng nhập</span>
                         </label>
-                        <a href="#" className={styles.forgotPassword}>Quên mật khẩu?</a>
+                        <button 
+                            type="button"
+                            className={styles.forgotPassword}
+                            onClick={() => alert('Chức năng quên mật khẩu đang phát triển.')}
+                        >
+                            Quên mật khẩu?
+                        </button>
                     </div>
 
                     <button type="submit" className={styles.loginButton} disabled={loading}>

@@ -253,3 +253,14 @@ button:disabled {
   color: #6b7280;
   font-size: 15px;
 }
+
+.subjectCard.locked {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.subjectCard.locked .cardActions button {
+  background-color: #999;
+  color: #fff;
+  cursor: not-allowed;
+}

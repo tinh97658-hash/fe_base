@@ -14,7 +14,7 @@ const StudentRoutes = () => {
 
   // Check if user is authenticated and is a student
   if (!isAuthenticated || user?.type !== 'student') {
-    return <Navigate to="/student/login" replace />;
+    return <Navigate to="/login" replace />;
   }
 
   return (
